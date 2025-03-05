@@ -1,0 +1,16 @@
+{
+  "name": "greenlight-codepush-cli",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "node src/index.js release --app myApp --platform aos --deployment Production --bundle ./test_bundle.zip --server-url http://localhost:3000"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "axios": "^1.8.1",
+    "commander": "^13.1.0",
+    "superagent": "^10.1.1"
+  }
+}
