@@ -1,9 +1,6 @@
-// Define routes for uploading and downloading
-
 const express = require("express");
 const multer = require("multer");
 const upload = multer({ dest: "uploads/" }); // Specify upload directory
-
 const router = express.Router();
 const { uploadBundle, downloadBundle } = require("../services/codePushService");
 
