@@ -14,9 +14,14 @@
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
+    "ejs": "^3.1.10",
     "express": "^4.21.2",
     "express-domain-middleware": "^0.1.0",
+    "express-session": "^1.18.1",
     "mime-types": "^2.1.35",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "passport": "^0.7.0",
+    "passport-github": "^1.1.0",
+    "passport-google-oauth20": "^2.0.0"
   }
 }
