@@ -2,6 +2,8 @@
 
 // Load the AWS SDK
 const AWS = require("aws-sdk");
+const dotenv = require("dotenv");
+dotenv.config();
 
 // Configure AWS SDK with credentials and region
 AWS.config.update({
