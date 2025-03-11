@@ -6,7 +6,7 @@ router.get("/dashBoard", (req, res) => {
   if (req.isAuthenticated()) {
     res.render("dashboard"); // Render the dashboard if authenticated
   } else {
-    res.redirect("/login"); // Redirect to login if not authenticated
+    res.redirect("/auth/login"); // Redirect to login if not authenticated
   }
 });
 

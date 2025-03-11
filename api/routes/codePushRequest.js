@@ -4,6 +4,15 @@ const upload = multer({ dest: "uploads/" }); // Specify upload directory
 const router = express.Router();
 const { uploadBundle, downloadBundle } = require("../services/codePushService");
 
+router.get("/upload", (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.redirect("/auth/login"); // Redirect to login if not authenticated
+  }
+
+  // Handle the upload if authenticated
+  res.render("upload");
+});
+
 router.post("/upload", upload.single("bundle"), async (req, res) => {
   try {
     console.log("File(bundle) received:", req.file); // bundle

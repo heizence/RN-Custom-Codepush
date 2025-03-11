@@ -8,7 +8,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const path = require("path");
 
-const authRoutes = require("./routes/auth");
+const userAuthRoutes = require("./routes/userAuth");
 const codePushRoutes = require("./routes/codePushRequest");
 const dashBoardRoutes = require("./routes/dashBoard");
 
@@ -18,6 +18,12 @@ dotenv.config();
 // Initialize express
 const app = express();
 const port = process.env.PORT || 3000;
+
+// main(/) route
+app.get("/", (req, res) => {
+  console.log(`\n## CodePush server is ready on ${process.env.SERVER_URL}:${port}\n`);
+  res.send("Greenlight Codepush server is ready!");
+});
 
 // Set EJS as the view engine
 app.set("view engine", "ejs");
@@ -30,17 +36,18 @@ app.use(bodyParser.urlencoded({ limit: "300mb", extended: true }));
 app.use(cors()); // Allow all origins, be more restrictive in production
 app.use(
   session({
-    secret: "1234abcd",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: true,
   })
 );
 
+// Passport middleware
 app.use(passport.initialize());
 app.use(passport.session());
 
 // Use routes
-app.use(authRoutes);
+app.use("/auth", userAuthRoutes);
 app.use(dashBoardRoutes);
 app.use("/api/codepush", codePushRoutes);
 
