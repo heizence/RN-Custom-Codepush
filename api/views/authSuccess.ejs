@@ -11,9 +11,7 @@
       align-items: center;
       height: 100vh;
       margin: 0;
-      background-image: url("./images/CodePushFinal_4_bg.svg");
-      background-size: cover;
-      background-position: center;
+      background-color: black;
     }
     h1,
     h2 {
@@ -36,7 +34,6 @@
       width: 100%;
       display: flex;
       flex-direction: row;
-      max-width: 600px;
       padding: 10px;
       margin: 40px 0px;
       background-color: white;
@@ -53,6 +50,25 @@
       padding: 2px 5px;
       margin-left: 10px;
     }
+
+    #snackbar {
+      visibility: hidden;
+      min-width: 250px;
+      margin-left: -125px;
+      background-color: #333;
+      color: #fff;
+      text-align: center;
+      border-radius: 2px;
+      padding: 16px;
+      position: fixed;
+      z-index: 1;
+      left: 50%;
+      bottom: 130px;
+      font-size: 17px;
+    }
+    #snackbar.show {
+      visibility: visible;
+    }
   </style>
   <body>
     <div id="contaier">
@@ -60,27 +76,26 @@
       <h1>Please copy and paste this access key to the command window:</h1>
 
       <div id="token-box">
-        <input type="text" value="sdflsanflaksjfowpfijoijf.sdflsanflaksjfowqfqwfjqwofjqwpfijwqopfijqwopfijoijf" id="token-text" readonly />
+        <input type="text" value="<%= token %>" id="token-text" readonly />
         <button id="token-copy-btn" onclick="myFunction()">Copy</button>
       </div>
 
       <h1>After doing so, please close this browser.</h1>
-
+      <div id="snackbar">AccessKey copied!</div>
       <a href="/auth/logout">Logout(for test)</a>
     </div>
   </body>
 
   <script>
     function myFunction() {
-      // Get the text field
       var copyText = document.getElementById("token-text");
-
-      // Select the text field
-      //copyText.select();
-      //copyText.setSelectionRange(0, 99999); // For mobile devices
-
-      // Copy the text inside the text field
       navigator.clipboard.writeText(copyText.value);
+
+      var x = document.getElementById("snackbar");
+      x.className = "show";
+      setTimeout(function () {
+        x.className = "hidden";
+      }, 2000);
     }
   </script>
 </html>

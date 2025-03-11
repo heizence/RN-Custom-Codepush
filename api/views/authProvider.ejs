@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>CodePush</title>
+    <style>
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background-color: black;
+      }
+      h1,
+      h2 {
+        color: white;
+        text-align: center;
+        margin: 0;
+        margin-bottom: 10px;
+      }
+      #contaier {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        width: 80vw;
+        max-width: 1000px;
+        align-items: center;
+        opacity: 0.8;
+      }
+
+      #button-div {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        margin-top: 30px;
+      }
+
+      a {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #56ace2;
+        color: black;
+        padding: 10px 16px;
+        margin: 0px 10px;
+        text-decoration: inherit;
+        font-family: "wf_segoe-ui_normal", "wf_segoe-ui_normal", Tahoma;
+        font-size: 1.2rem;
+      }
+
+      a:hover {
+        background-color: #82c1e9;
+      }
+
+      img {
+        width: 28px;
+        margin-right: 7px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>Please select an authentication provider for your CodePush account.</h1>
+      <div id="button-div">
+        <a href="/auth/<%=action%>/github"> <img src="/images/GitHub.png" /> GitHub</a>
+        <span class="spacer" />
+        <a href="/auth/<%=action%>/google"><img src="/images/Google.png" /> Google</a><br />
+      </div>
+    </div>
+  </body>
+</html>
