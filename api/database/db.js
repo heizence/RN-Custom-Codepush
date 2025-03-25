@@ -1,7 +1,8 @@
 const mysql = require("mysql2");
 const dotenv = require("dotenv");
+const path = require("path");
 
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 // Create a connection pool (only one connection to the database is made and reused)
 const pool = mysql.createPool({
