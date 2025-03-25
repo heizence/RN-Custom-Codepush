@@ -1,10 +1,12 @@
+const path = require("path");
 const passport = require("passport");
 const GitHubStrategy = require("passport-github2").Strategy;
 const GoogleStrategy = require("passport-google-oauth2").Strategy;
 const dotenv = require("dotenv");
 const { loginUser, registerUser } = require("../database/query");
 const { generateJWT } = require("./jwt-utils");
-dotenv.config();
+
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 const ENV = { ...process.env };
 

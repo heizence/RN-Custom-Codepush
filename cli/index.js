@@ -3,14 +3,17 @@
 const { Command } = require("commander");
 const program = new Command();
 const dotenv = require("dotenv");
+const path = require("path");
 const open = require("open");
 const { input } = require("@inquirer/prompts");
 const axios = require("axios"); // To make HTTP requests
 
-dotenv.config();
+//dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const port = process.env.PORT || 3000;
 const url = process.env.SERVER_URL || "http://localhost";
+
 console.log(`${url}:${port}/auth/verifyToken`);
 
 program.version("1.0.0").description("greenlight-codepush CLI - Command Line Interface for CodePush Management and Authorization");
