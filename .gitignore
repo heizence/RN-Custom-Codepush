@@ -1,6 +1,6 @@
 /api/node_modules
-/api/.env
 /api/uploads
 
 /cli/node_modules
-/cli/.env
+
+.env
