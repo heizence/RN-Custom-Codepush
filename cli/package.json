@@ -13,10 +13,15 @@
   "description": "",
   "dependencies": {
     "axios": "^1.8.2",
+    "chalk": "^4.1.2",
     "commander": "^13.1.0",
     "dotenv": "^16.4.7",
+    "fs": "^0.0.1-security",
     "inquirer": "^12.4.3",
     "open": "^8.0.0",
-    "superagent": "^10.1.1"
+    "os": "^0.1.2",
+    "path": "^0.12.7",
+    "superagent": "^10.1.1",
+    "uuid": "^11.1.0"
   }
 }
