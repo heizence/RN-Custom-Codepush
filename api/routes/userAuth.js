@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const passport = require("../services/auth.js"); // The passport configuration
+const { verifyToken } = require("../services/jwt-utils.js");
 
 router.get("/login", (req, res) => {
   res.render("authProvider", { action: "login" }); // Use flash messages for errors
@@ -10,12 +11,15 @@ router.get("/register", (req, res) => {
   res.render("authProvider", { action: "register" }); // Use flash messages for errors
 });
 
+let accessToken;
+
 /******************* GitHub Authentication Router ******************/
 router.get("/login/github", passport.authenticate("github-login"));
 router.get("/login/github/callback", passport.authenticate("github-login", { failureRedirect: "/auth/callback/message" }), (req, res) => {
   const success = req.user.success;
   if (success) {
     const token = req.user.token;
+    accessToken = token;
     res.render("authSuccess", { token });
   } else {
     res.render("message", {
@@ -30,6 +34,7 @@ router.get("/register/github/callback", passport.authenticate("github-register",
   const success = req.user.success;
   if (success) {
     const token = req.user.token;
+    accessToken = token;
     res.render("authSuccess", { token });
   } else {
     res.render("message", {
@@ -45,6 +50,7 @@ router.get("/login/google/callback", passport.authenticate("google-login", { fai
   const success = req.user.success;
   if (success) {
     const token = req.user.token;
+    req.accessToken = token;
     res.render("authSuccess", { token });
   } else {
     res.render("message", {
@@ -59,6 +65,7 @@ router.get("/register/google/callback", passport.authenticate("google-register",
   const success = req.user.success;
   if (success) {
     const token = req.user.token;
+    accessToken = token;
     res.render("authSuccess", { token });
   } else {
     res.render("message", {
@@ -86,6 +93,18 @@ router.get("/logout", (req, res) => {
     // Need to delete jwt token file stored at local.
     res.redirect("/auth/login"); // Redirect to login after logout
   });
+});
+
+// Route to verify the token
+router.post("/verifyToken", (req, res) => {
+  const { token } = req.body;
+
+  // Check if the token matches the one stored in the session
+  if (token === accessToken && verifyToken(token)) {
+    res.json({ success: true, message: "Token is valid" });
+  } else {
+    res.json({ success: false, message: "Invalid token" });
+  }
 });
 
 module.exports = router;

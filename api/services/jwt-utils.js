@@ -1,29 +1,37 @@
 const path = require("path");
 const jwt = require("jsonwebtoken");
+const { v4: uuidv4 } = require("uuid");
 const dotenv = require("dotenv");
+
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const generateJWT = (accountId, type, name) => {
-  return jwt.sign(
+  const uniqueId = uuidv4(); // You can also use Date.now() for a timestamp
+  const token = jwt.sign(
     {
       accountId,
       type,
       name,
+      uniqueId,
     },
     process.env.JWT_SECRET, // Secret key stored in .env
     { expiresIn: "365d" } // Token valid for 365 days
   );
+  return token;
 };
 
 const verifyToken = token => {
   if (!token) {
-    return res.status(401).send("Access Denied: No token provided");
+    return false;
   }
 
   try {
-    const verified = jwt.verify(token, process.env.JWT_SECRET); // Verify token using the secret key
+    const verified = jwt.verify(token, process.env.JWT_SECRET);
+    //console.log("verified : ", verified);
+    return true;
   } catch (err) {
-    res.status(400).send("Invalid Token");
+    //console.log("verification error : ", err);
+    return false;
   }
 };
 
