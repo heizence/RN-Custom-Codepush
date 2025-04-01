@@ -19,6 +19,7 @@
     "express": "^4.21.2",
     "express-domain-middleware": "^0.1.0",
     "express-session": "^1.18.1",
+    "fs": "^0.0.1-security",
     "jsonwebtoken": "^9.0.2",
     "mariadb": "^3.4.0",
     "mime-types": "^2.1.35",
@@ -26,6 +27,7 @@
     "mysql2": "^3.13.0",
     "passport": "^0.7.0",
     "passport-github2": "^0.1.12",
-    "passport-google-oauth2": "^0.2.0"
+    "passport-google-oauth2": "^0.2.0",
+    "path": "^0.12.7"
   }
 }
