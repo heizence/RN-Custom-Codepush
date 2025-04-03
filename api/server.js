@@ -53,9 +53,9 @@ app.use(passport.session());
 app.use("/auth", userAuthRoutes);
 app.use(dashBoardRoutes);
 
-app.use(CheckTokenMiddleware);
-app.use("/app", userAppsRoutes);
-app.use("/api/codepush", codePushRoutes);
+//app.use(CheckTokenMiddleware);
+app.use("/app", CheckTokenMiddleware, userAppsRoutes);
+app.use("/api/codepush", CheckTokenMiddleware, codePushRoutes);
 
 // Start the server
 app.listen(port, () => {

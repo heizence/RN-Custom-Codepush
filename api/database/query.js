@@ -6,10 +6,10 @@ const db = require("./db");
 async function runQuery(query, params = []) {
   try {
     const [rows] = await db.query(query, params);
-    if (rows.length === 0) {
-      return null;
+    if (rows) {
+      return rows;
     }
-    return rows;
+    return null;
   } catch (error) {
     console.error("Database Error:", error);
     throw error;
@@ -58,10 +58,14 @@ async function getAppListByUser(accountId) {
   }
 
   const userId = checkUser[0].id;
+  console.log("userId : ", userId);
   const query = `SELECT app_name, production_key, staging_key, created_at FROM greenlight_codepush_dev_db.apps WHERE owner_id = ?;`;
   const res = await runQuery(query, [userId]);
-  if (res) {
+  console.log("res : ", res);
+  if (res.length > 0) {
     return responseDto(true, 200, ``, { table: res });
+  } else if (res.length === 0) {
+    return responseDto(true, 200, `No app added yet!`);
   }
   return null;
 }

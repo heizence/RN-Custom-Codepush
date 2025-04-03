@@ -9,7 +9,7 @@ router.post("/add", async (req, res) => {
     const tokenInfo = req.tokenInfo;
     const appName = req.body.appName;
 
-    const queryRes = await addApp(appName, tokenInfo.accountId || tokenInfo.email);
+    const queryRes = await addApp(appName, tokenInfo.accountId);
     if (!queryRes) {
       res.status(501).json(responseDto(false, "Add app failed. Internal error!"));
     } else {

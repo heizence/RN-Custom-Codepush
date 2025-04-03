@@ -51,7 +51,7 @@ router.get("/login/google/callback", passport.authenticate("google-login", { fai
   const success = req.user.success;
   if (success) {
     const token = req.user.token;
-    req.accessToken = token;
+    accessToken = token;
     res.render("authSuccess", { token });
   } else {
     res.render("message", {
@@ -99,12 +99,14 @@ router.get("/logout", (req, res) => {
 // Route to verify the token
 router.post("/verifyToken", (req, res) => {
   const { token } = req.body;
+  console.log("token from req : ", token);
 
+  console.log("accessToken : ", accessToken);
   // Check if the token matches the one stored in the session
   if (token === accessToken && verifyToken(token)) {
-    res.status(200).json(responseDto(true, 200, "Token is valid"));
+    res.status(200).json(responseDto(true, 200, "Token is valid."));
   } else {
-    res.status(403).json(responseDto(false, 403, "Invalid token"));
+    res.status(403).json(responseDto(false, 403, "Invalid token!"));
   }
 });
 

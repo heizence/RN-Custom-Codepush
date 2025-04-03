@@ -14,10 +14,10 @@ const ENV = { ...process.env };
 const loginCallback = async (accessToken, refreshToken, profile, done) => {
   try {
     const user = await loginUser(profile.id);
-    if (!user) {
+    if (!user[0]) {
       done(null, { success: false });
     } else {
-      const token = generateJWT(user[0].account_id, user[0].email);
+      const token = generateJWT(user[0].account_id);
       done(null, { user, token, success: true });
     }
   } catch (err) {
