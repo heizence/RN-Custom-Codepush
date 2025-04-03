@@ -5,11 +5,12 @@ const dotenv = require("dotenv");
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
-const generateJWT = accountId => {
+const generateJWT = (accountId, email) => {
   const uniqueId = uuidv4();
   const token = jwt.sign(
     {
       accountId,
+      email,
       uniqueId,
     },
     process.env.JWT_SECRET, // Secret key stored in .env

@@ -1,6 +1,7 @@
 const axios = require("axios");
 const dotenv = require("dotenv");
 const path = require("path");
+const chalk = require("chalk");
 const fs = require("fs");
 const os = require("os");
 
@@ -39,18 +40,25 @@ const commonAPI = async (method = "post", reqPath, reqParamsOrBody, needAuth = t
     timeout: 40000,
   })
     .then(response => {
-      console.log(`[commonAPI] [${path}]success : `, response.data);
+      //console.log(`[commonAPI] [${reqPath}]success : `, response.data);
+      console.log(response.data.message);
+
+      const dataToDisplay = response.data.data;
+      if (dataToDisplay) {
+        if (dataToDisplay.table) console.table(dataToDisplay.table);
+      }
       return response.data;
     })
     .catch(error => {
       //console.log(`[commonAPI] [${path}]error : `, error.response?.data);
+      console.log(chalk.red("[Error] " + error.response?.data.message));
       return error.response?.data;
     });
 };
 
 const verifyToken = token => commonAPI("post", "auth/verifyToken", { token }, false);
 const addApp = body => commonAPI("post", "app/add", body);
-const getApplist = body => commonAPI("post", "app/list", body);
+const getApplist = () => commonAPI("get", "app/list", {});
 const removeApp = body => commonAPI("post", "app/remove", body);
 const renameApp = body => commonAPI("post", "app/rename", body);
 

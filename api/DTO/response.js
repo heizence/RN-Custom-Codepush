@@ -1,5 +1,5 @@
-const responseDto = (success, message = "", data = "") => {
-  return { success, message, data };
+const responseDto = (success, statusCode, message = "", data = "") => {
+  return { success, statusCode, message, data };
 };
 
 module.exports = {

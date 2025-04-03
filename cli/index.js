@@ -165,7 +165,8 @@ program
         }
         break;
       case "list":
-        console.log("list!!");
+        API.getApplist();
+
         break;
       case "remove":
         switch (arg2) {
