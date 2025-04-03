@@ -7,8 +7,10 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const path = require("path");
 const userAuthRoutes = require("./routes/userAuth");
+const userAppsRoutes = require("./routes/userApps");
 const codePushRoutes = require("./routes/codePushRequest");
 const dashBoardRoutes = require("./routes/dashBoard");
+const CheckTokenMiddleware = require("./middlewares/checkToken");
 
 // Load environment variables
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
@@ -22,7 +24,7 @@ const url = process.env.SERVER_URL || "http://localhost";
 
 // main(/) route
 app.get("/", (req, res) => {
-  console.log(`\n## CodePush server is ready on ${url}:${port}\n`);
+  console.log(`\nCodePush server is ready on ${url}:${port}\n`);
   res.send("Greenlight Codepush server is ready!");
 });
 
@@ -50,9 +52,12 @@ app.use(passport.session());
 // Use routes
 app.use("/auth", userAuthRoutes);
 app.use(dashBoardRoutes);
+
+app.use(CheckTokenMiddleware);
+app.use("/app", userAppsRoutes);
 app.use("/api/codepush", codePushRoutes);
 
 // Start the server
 app.listen(port, () => {
-  console.log(`\n## CodePush server running on ${url}:${port}\n`);
+  console.log(`\nCodePush server running on ${url}:${port}\n`);
 });
