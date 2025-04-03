@@ -8,8 +8,8 @@ const open = require("open");
 const { input } = require("@inquirer/prompts");
 const fs = require("fs");
 const os = require("os");
-const axios = require("axios");
 const packageJson = require("./package.json");
+const API = require("./src/libs/APIs");
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
@@ -17,28 +17,8 @@ const port = process.env.PORT || 3000;
 const url = process.env.SERVER_URL || "http://localhost";
 
 const homeDirectory = os.homedir();
-const tokenDirectory = path.join(homeDirectory, ".code-push.config"); // /Users/{username}/.code-push.config
+const tokenDirectory = path.join(homeDirectory, ".greenlight-codepush.config"); // /Users/{username}/.code-push.config
 const tokenFilePath = path.join(tokenDirectory, "token.json");
-
-const verifyTokenAPI = async tokenInput => {
-  const response = await axios.post(
-    `${url}:${port}/auth/verifyToken`,
-    {
-      token: tokenInput,
-    },
-    {
-      headers: {
-        "Content-Type": "application/json", // Explicitly set the content type as JSON
-      },
-    }
-  );
-
-  if (response.data.success) {
-    return true;
-  } else {
-    return false;
-  }
-};
 
 program
   .version("1.0.0")
@@ -71,7 +51,8 @@ program
         const data = fs.readFileSync(tokenFilePath, "utf8");
         const { token } = JSON.parse(data);
 
-        if (verifyTokenAPI(token)) {
+        const res = await API.verifyToken(token);
+        if (res.success) {
           console.log("You are already logged in from this machine.");
           return;
         }
@@ -88,7 +69,8 @@ program
         },
       });
 
-      if (verifyTokenAPI(tokenInput)) {
+      const res = await API.verifyToken(tokenInput);
+      if (res.success) {
         if (!fs.existsSync(tokenDirectory)) {
           fs.mkdirSync(tokenDirectory, { recursive: true });
         }
@@ -119,6 +101,124 @@ program
   });
 
 program
+  .command("register")
+  .description("Register a new CodePush account")
+  .action(async () => {
+    if (fs.existsSync(tokenFilePath)) {
+      console.log(`The access token already exists. Please log in.`);
+    } else {
+      console.log(`Opening your browser...`);
+
+      open(`${url}:${port}/auth/register`);
+      const tokenInput = await input({
+        message: "Please enter your access token: ",
+        validate: input => {
+          if (!input) {
+            return "Token cannot be empty";
+          }
+          return true;
+        },
+      });
+
+      const res = await API.verifyToken(tokenInput);
+      if (res.success) {
+        if (!fs.existsSync(tokenDirectory)) {
+          fs.mkdirSync(tokenDirectory, { recursive: true });
+        }
+        fs.writeFileSync(tokenFilePath, JSON.stringify({ token: tokenInput }), "utf8");
+
+        console.log(
+          `Successfully registered and logged-in. Your session file was written to ${tokenFilePath}. You can run the code-push logout command at any time to delete this file and terminate your session.`
+        );
+      } else {
+        console.log("Invalid token. Please try again.");
+        return true;
+      }
+    }
+  });
+
+program
+  .command("app")
+  .arguments("[arg1] [arg2] [arg3]")
+  .description("View and manage your CodePush apps")
+  .action(async (arg1 = "", arg2 = "", arg3 = "") => {
+    console.log("arg1 : ", arg1);
+    console.log("arg2 : ", arg2);
+    console.log("arg3 : ", arg3);
+    switch (arg1) {
+      case "":
+        console.log(`Usage: greenlight-codepush app <command>\n`);
+        console.log("commands : ");
+        console.log(`  greenlight-codepush app add       Add a new app to your account`);
+        console.log(`  greenlight-codepush app remove    Remove an app from your account`);
+        console.log(`  greenlight-codepush app rename    Rename an existing app`);
+        console.log(`  greenlight-codepush app list      Lists the apps associated with your account`);
+        break;
+      case "add":
+        switch (arg2) {
+          case "":
+            console.log(`Usage: greenlight-codepush app add <appName>\n`);
+            break;
+          default:
+            API.addApp({ appName: arg2 });
+            break;
+        }
+        break;
+      case "list":
+        console.log("list!!");
+        break;
+      case "remove":
+        switch (arg2) {
+          case "":
+            console.log(`Usage: greenlight-codepush app remove <appName>\n`);
+            break;
+          default:
+            API.removeApp({ appName: arg2 });
+            break;
+        }
+        break;
+      case "rename":
+        switch (arg2) {
+          case "":
+            console.log(`Usage: greenlight-codepush app rename <currentAppName> <newAppName>\n`);
+            break;
+          default:
+            switch (arg3) {
+              case "":
+                console.log(`Usage: greenlight-codepush app rename <currentAppName> <newAppName>\n`);
+                break;
+              default:
+                const res = await API.renameApp({ currentAppName: arg2, newAppName: arg3 });
+                // console.log(res.message);
+                break;
+            }
+            break;
+        }
+        break;
+      default:
+        break;
+    }
+  });
+
+program
+  .command("release")
+  .description("Release an update to an app deployment")
+  .action(async () => {
+    console.log(`Uploading bundle from ${bundlePath}...`);
+    // Add logic to handle the bundle upload here
+  });
+
+program
+  .command("rollback")
+  .description("Rollback the latest release for an app deployment")
+  .action(async () => {
+    console.log(`Uploading bundle from ${bundlePath}...`);
+    // Add logic to handle the bundle upload here
+  });
+
+// for test
+
+program
   .command("upload <bundlePath>")
   .description("Upload a new bundle to the server")
   .action(async () => {
@@ -127,16 +227,6 @@ program
   });
 
 program
-  .command("release <version>")
-  .description("Release a new update for your app")
-  .option("--deployment <deployment>", "Deployment environment (staging or production)")
-  .action((version, cmd) => {
-    console.log(`Releasing version ${version} to ${cmd.deployment || "staging"}...`);
-    // Add logic to release the version here
-  });
-
-// Define status command
-program
   .command("status")
   .description("Check the status of the current deployment")
   .action(() => {
@@ -144,17 +234,6 @@ program
     // Add logic to check the status of the app here
   });
 
-// Define rollback command
-program
-  .command("rollback <version>")
-  .description("Rollback to a previous version")
-  .option("--deployment <deployment>", "Deployment environment (staging or production)")
-  .action((version, cmd) => {
-    console.log(`Rolling back to version ${version} in ${cmd.deployment || "staging"}...`);
-    // Add logic to rollback the version here
-  });
-
-// Display help if no command is provided
 program.parse(process.argv);
 
 if (process.argv.length < 3) {
