@@ -5,17 +5,15 @@ const dotenv = require("dotenv");
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
-const generateJWT = (accountId, type, name) => {
-  const uniqueId = uuidv4(); // You can also use Date.now() for a timestamp
+const generateJWT = accountId => {
+  const uniqueId = uuidv4();
   const token = jwt.sign(
     {
       accountId,
-      type,
-      name,
       uniqueId,
     },
     process.env.JWT_SECRET, // Secret key stored in .env
-    { expiresIn: "365d" } // Token valid for 365 days
+    { expiresIn: "1d" } // Token valid for 7 days
   );
   return token;
 };
@@ -28,7 +26,7 @@ const verifyToken = token => {
   try {
     const verified = jwt.verify(token, process.env.JWT_SECRET);
     //console.log("verified : ", verified);
-    return true;
+    return verified;
   } catch (err) {
     //console.log("verification error : ", err);
     return false;
