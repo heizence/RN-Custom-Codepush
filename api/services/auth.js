@@ -17,7 +17,7 @@ const loginCallback = async (accessToken, refreshToken, profile, done) => {
     if (!user) {
       done(null, { success: false });
     } else {
-      const token = generateJWT(user.account_id, user.type, user.user_name);
+      const token = generateJWT(user[0].account_id);
       done(null, { user, token, success: true });
     }
   } catch (err) {

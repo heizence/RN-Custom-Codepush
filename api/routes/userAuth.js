@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const passport = require("../services/auth.js"); // The passport configuration
 const { verifyToken } = require("../services/jwt-utils.js");
+const { responseDto } = require("../DTO/response.js");
 
 router.get("/login", (req, res) => {
   res.render("authProvider", { action: "login" }); // Use flash messages for errors
@@ -101,9 +102,9 @@ router.post("/verifyToken", (req, res) => {
 
   // Check if the token matches the one stored in the session
   if (token === accessToken && verifyToken(token)) {
-    res.json({ success: true, message: "Token is valid" });
+    res.status(200).json(responseDto(true, "Token is valid"));
   } else {
-    res.json({ success: false, message: "Invalid token" });
+    res.status(403).json(responseDto(false, "Invalid token"));
   }
 });
 
