@@ -8,6 +8,11 @@ const open = require("open");
 const { input } = require("@inquirer/prompts");
 const fs = require("fs");
 const os = require("os");
+const { execSync } = require("child_process");
+const FormData = require("form-data");
+const { uuidv4 } = require("uuid");
+const archiver = require("archiver");
+
 const packageJson = require("./package.json");
 const API = require("./src/libs/APIs");
 
@@ -142,9 +147,9 @@ program
   .arguments("[arg1] [arg2] [arg3]")
   .description("View and manage your CodePush apps")
   .action(async (arg1 = "", arg2 = "", arg3 = "") => {
-    console.log("arg1 : ", arg1);
-    console.log("arg2 : ", arg2);
-    console.log("arg3 : ", arg3);
+    // console.log("arg1 : ", arg1);
+    // console.log("arg2 : ", arg2);
+    // console.log("arg3 : ", arg3);
     switch (arg1) {
       case "":
         console.log(`Usage: greenlight-codepush app <command>\n`);
@@ -202,11 +207,121 @@ program
   });
 
 program
+  .command("deployment")
+  .arguments("[arg1] [arg2] [arg3]")
+  .description("Shows CodePush deployments history by app")
+  .action(async (arg1 = "", arg2 = "", arg3 = "") => {
+    console.log("arg1 : ", arg1);
+    console.log("arg2 : ", arg2);
+    console.log("arg3 : ", arg3);
+
+    switch (arg1) {
+      case "":
+        console.log(`Usage: greenlight-codepush deployment history <appName> <deploymentName>\n`);
+        break;
+      default:
+        switch (arg2) {
+          case "":
+            console.log(`Usage: greenlight-codepush deployment history <appName> <deploymentName>\n`);
+            break;
+          default:
+            switch (arg3) {
+              case "":
+                console.log(`Usage: greenlight-codepush deployment history <appName> <deploymentName>\n`);
+                break;
+              default:
+                const res = await API.getDeploymentHistory({ appName: arg2, deploymentName: arg3 });
+
+                break;
+            }
+            break;
+        }
+        break;
+    }
+  });
+
+program
   .command("release")
-  .description("Release an update to an app deployment")
-  .action(async () => {
-    console.log(`Uploading bundle from ${bundlePath}...`);
-    // Add logic to handle the bundle upload here
+  .description("Release a new update to CodePush server")
+  .option("-m, --isMandatory", "isMandatory")
+  .option("-a, --app <appName>", "App name")
+  .option("-p, --platform <platform>", "Platform: android | ios")
+  .option("-d, --deployment <deploymentName>", "Deployment name") // Production || Staging
+  .action(async options => {
+    try {
+      console.log("options: ", options);
+      const { isMandatory, app, platform, deployment } = options;
+      if (!app || !platform || !deployment) {
+        console.log(`Usage: greenlight-codepush release -m <isMandatory> -a <appName> -p <platform> -d <deploymentName> \n`);
+        return;
+      }
+
+      const bundleOutputDir = path.resolve(os.tmpdir(), `codepush_bundle_${platform}`);
+      const bundleOutput = path.join(bundleOutputDir, "index.bundle");
+      const assetsDest = path.join(bundleOutputDir, "assets");
+      const zipFilePath = path.resolve(os.tmpdir(), `codepush_bundle_${platform}.zip`);
+
+      console.log(chalk.blue("📦 1. Bundling the React Native app..."));
+
+      // 번들 디렉토리 정리
+      fs.rmSync(bundleOutputDir, { recursive: true, force: true });
+      fs.mkdirSync(bundleOutputDir, { recursive: true });
+
+      // 1. React Native 번들 생성
+      execSync(`npx react-native bundle --platform ${platform} --dev false --entry-file index.js --bundle-output ${bundleOutput} --assets-dest ${assetsDest}`, {
+        stdio: "inherit",
+      });
+
+      console.log(chalk.green("✅ Bundle created successfully"));
+
+      // 2. .zip 파일로 압축
+      console.log(chalk.blue("📦 2. Zipping the bundle..."));
+
+      await new Promise((resolve, reject) => {
+        const output = fs.createWriteStream(zipFilePath);
+        const archive = archiver("zip", { zlib: { level: 9 } });
+
+        output.on("close", () => {
+          console.log(chalk.green(`✅ Zip created: ${zipFilePath}`));
+          resolve();
+        });
+
+        archive.on("error", err => reject(err));
+
+        archive.pipe(output);
+        archive.file(bundleOutput, { name: "index.bundle" });
+        archive.directory(assetsDest, "assets");
+        archive.finalize();
+      });
+
+      // 3. 서버로 업로드
+      console.log(chalk.blue("⬆️  3. Uploading to CodePush server..."));
+
+      const form = new FormData();
+      form.append("app", app);
+      form.append("deployment", deployment);
+      form.append("targetBinaryVersion", targetBinaryVersion);
+      form.append("releaseId", uuidv4());
+      form.append("bundle", fs.createReadStream(zipFilePath));
+
+      // 3. 서버 요청
+      const res = await axios.post(`${process.env.SERVER_URL}/release`, form, {
+        headers: {
+          ...form.getHeaders(),
+          Authorization: `Bearer ${process.env.ACCESS_TOKEN}`,
+        },
+      });
+
+      console.log(chalk.green(`✅ Release successful: ${res.data.message}`));
+    } catch (err) {
+      console.log(chalk.red(`❌ Error during release: ${err.message}`));
+    } finally {
+      // 4. 생성된 임시 파일 삭제
+      // console.log(chalk.yellow("🧹 Cleaning up temporary files..."));
+      // fs.rmSync(bundleOutputDir, { recursive: true, force: true });
+      // if (fs.existsSync(zipFilePath)) fs.rmSync(zipFilePath);
+      // console.log(chalk.green("✅ Cleaned up."));
+    }
   });
 
 program
