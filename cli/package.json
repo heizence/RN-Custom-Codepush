@@ -12,10 +12,13 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "archiver": "^7.0.1",
     "axios": "^1.8.2",
     "chalk": "^4.1.2",
+    "child_process": "^1.0.2",
     "commander": "^13.1.0",
     "dotenv": "^16.4.7",
+    "form-data": "^4.0.2",
     "fs": "^0.0.1-security",
     "inquirer": "^12.4.3",
     "open": "^8.0.0",
