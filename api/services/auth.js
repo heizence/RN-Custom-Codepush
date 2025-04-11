@@ -3,7 +3,7 @@ const passport = require("passport");
 const GitHubStrategy = require("passport-github2").Strategy;
 const GoogleStrategy = require("passport-google-oauth2").Strategy;
 const dotenv = require("dotenv");
-const { loginUser, registerUser } = require("../database/query");
+const { findUser, registerUser } = require("../database/query");
 const { generateJWT } = require("./jwt-utils");
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
@@ -13,7 +13,7 @@ const ENV = { ...process.env };
 // Do not delete accessToken, refreshToken parameters!
 const loginCallback = async (accessToken, refreshToken, profile, done) => {
   try {
-    const user = await loginUser(profile.id);
+    const user = await findUser(profile.id);
     if (!user[0]) {
       done(null, { success: false });
     } else {
