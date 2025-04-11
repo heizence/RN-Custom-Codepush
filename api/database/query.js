@@ -1,6 +1,6 @@
 const { responseDto } = require("../DTO/response");
 const { isValidName, generateRandomkey } = require("../services/utils");
-const db = require("./db");
+const { db, getConnection } = require("./db");
 
 // Function to execute an SQL query safely
 async function runQuery(query, params = []) {
@@ -16,26 +16,17 @@ async function runQuery(query, params = []) {
   }
 }
 
-// 🔹 Secure User Login
-async function loginUser(accountId) {
-  console.log(`\n[query]loginUser`);
-  const query = `SELECT id, account_id, email, user_name, type, created_at FROM greenlight_codepush_dev_db.users WHERE account_id = ?;`;
-  return await runQuery(query, [accountId]);
-}
-
+// Query for finding a specific user by account_id
 async function findUser(accountId) {
   console.log(`\n[query]findUser. accountId : `, accountId);
   const query = `SELECT id, account_id, email, user_name, type, created_at FROM greenlight_codepush_dev_db.users WHERE account_id = ?;`;
   return await runQuery(query, [accountId]);
 }
 
-// 사용자 등록
+// Query for registering a new user
 async function registerUser(accountId, email = "", userName = "", type) {
   const checkUser = await findUser(accountId);
-  console.log("checkUser : ", checkUser);
   if (checkUser) {
-    // already signed up user!
-    console.log("already signed up user!");
     return null;
   } else {
     const id = generateRandomkey(50);
@@ -44,12 +35,21 @@ async function registerUser(accountId, email = "", userName = "", type) {
   }
 }
 
-async function findApp(appName) {
+async function findApp(userId, appName) {
   console.log(`\n[query]findApp`);
-  const query = `SELECT id, app_name, production_key, staging_key, owner_id, created_at FROM greenlight_codepush_dev_db.apps WHERE app_name = ?;`;
-  return await runQuery(query, [appName]);
+
+  let query;
+  if (appName) {
+    // for checking a specific app
+    query = `SELECT id, app_name, owner_id, created_at FROM greenlight_codepush_dev_db.apps WHERE owner_id = ? AND app_name = ?;`;
+  } else {
+    // for request getAppListByUser
+    query = `SELECT app_name, created_at FROM greenlight_codepush_dev_db.apps WHERE owner_id = ?;`;
+  }
+  return await runQuery(query, [userId, appName]);
 }
 
+// Query for listup all apps by user
 async function getAppListByUser(accountId) {
   console.log(`\n[query]getAppListByUser`);
   const checkUser = await findUser(accountId);
@@ -58,10 +58,8 @@ async function getAppListByUser(accountId) {
   }
 
   const userId = checkUser[0].id;
-  console.log("userId : ", userId);
-  const query = `SELECT app_name, production_key, staging_key, created_at FROM greenlight_codepush_dev_db.apps WHERE owner_id = ?;`;
-  const res = await runQuery(query, [userId]);
-  console.log("res : ", res);
+  const res = await findApp(userId);
+
   if (res.length > 0) {
     return responseDto(true, 200, ``, { table: res });
   } else if (res.length === 0) {
@@ -70,6 +68,7 @@ async function getAppListByUser(accountId) {
   return null;
 }
 
+// Query for add a new app for a specific user
 async function addApp(appName, accountId) {
   console.log(`\n[query]addApp`);
 
@@ -79,35 +78,57 @@ async function addApp(appName, accountId) {
     return responseDto(false, 400, "App name is too long!");
   }
 
-  const checkApp = await findApp(appName);
-  if (checkApp) {
+  const checkUser = await findUser(accountId);
+  if (!checkUser) {
+    return null;
+  }
+
+  const userId = checkUser[0].id;
+
+  const checkApp = await findApp(userId, appName);
+  if (checkApp && checkApp.length) {
     return responseDto(false, 400, `An app named "${appName}" already exists.`);
   } else {
-    const checkUser = await findUser(accountId);
-    if (!checkUser) {
-      return null;
-    }
-
-    const userId = checkUser[0].id;
-    const productionKey = generateRandomkey(30);
-    const stagingKey = generateRandomkey(30);
     const appId = generateRandomkey(50);
+    const connection = await getConnection(); // for transaction
 
-    const query = `INSERT INTO greenlight_codepush_dev_db.apps (id, app_name, production_key, staging_key, owner_id, created_at) VALUES(?, ?, ?, ?, ?, current_timestamp());`;
-    const res = await runQuery(query, [appId, appName, productionKey, stagingKey, userId]);
+    try {
+      await connection.beginTransaction();
 
-    if (res) {
+      // add new app
+      const addAppQuery = `INSERT INTO greenlight_codepush_dev_db.apps (id, app_name, owner_id, created_at) VALUES(?, ?, ?, current_timestamp());`;
+
+      await connection.execute(addAppQuery, [appId, appName, userId]);
+
+      // add PRODUCTION and STAGING deployments
+      const productionId = generateRandomkey(50);
+      const productionKey = generateRandomkey(30);
+      const stagingId = generateRandomkey(50);
+      const stagingKey = generateRandomkey(30);
+
+      const addDeploymentQuery = `INSERT INTO greenlight_codepush_dev_db.deployments (id, app_id, deployment_name, deployment_key, created_at) VALUES(?, ?, ?, ?, current_timestamp()), (?, ?, ?, ?, current_timestamp());`;
+
+      await connection.execute(addDeploymentQuery, [productionId, appId, "PRODUCTION", productionKey, stagingId, appId, "STAGING", stagingKey]);
+
+      await connection.commit();
+
       const apps = [
         { Name: "Production", "Deployment Key": productionKey },
         { Name: "Staging", "Deployment Key": stagingKey },
       ];
 
       return responseDto(true, 200, `Successfully added the "${appName}" app, along with the following default deployments:`, { table: apps });
+    } catch (error) {
+      await connection.rollback();
+      console.error("Transaction failed:", error);
+      return null;
+    } finally {
+      connection.release();
     }
-    return null;
   }
 }
 
+// Query for remove a specific app owned by a user
 async function removeApp(appName, accountId) {
   console.log(`\n[query]removeApp`);
   const checkUser = await findUser(accountId);
@@ -126,6 +147,7 @@ async function removeApp(appName, accountId) {
   return null;
 }
 
+// Query for rename a specific app owned by a user
 async function renameApp(currentAppName, newAppName, accountId) {
   console.log(`\n[query]renameApp`);
   const checkUser = await findUser(accountId);
@@ -133,7 +155,7 @@ async function renameApp(currentAppName, newAppName, accountId) {
     return null;
   }
   const userId = checkUser[0].id;
-  const findQuery = `SELECT id, app_name, production_key, staging_key, owner_id, created_at FROM greenlight_codepush_dev_db.apps WHERE app_name = ? AND owner_id = ?`;
+  const findQuery = `SELECT id, app_name, owner_id, created_at FROM greenlight_codepush_dev_db.apps WHERE app_name = ? AND owner_id = ?`;
   const result = await runQuery(findQuery, [currentAppName, userId]);
 
   if (result) {
@@ -150,12 +172,49 @@ async function renameApp(currentAppName, newAppName, accountId) {
   }
 }
 
+// Query for get all deployments history for a specific app
+async function findDeployment(appId, deploymentName) {
+  console.log(`\n[query]findDeployment`);
+
+  // find deployment
+  const findDeploymentQuery = `SELECT deployment_name, deployment_key, created_at FROM greenlight_codepush_dev_db.deployments WHERE app_id = ? AND deployment_name = ?`;
+
+  return await runQuery(findDeploymentQuery, [appId, deploymentName]);
+}
+
+async function getDeploymentHistory(accountId, appName, deploymentName) {
+  console.log(`\n[query]getDeploymentHistory`);
+
+  const checkUser = await findUser(accountId);
+  console.log("checkUser : ", checkUser);
+  if (!checkUser) {
+    return null;
+  }
+
+  // find app
+  const userId = checkUser[0].id;
+  const checkApp = await findApp(userId, appName);
+
+  if (checkApp.length === 0) {
+    return responseDto(false, 404, `App ${appName} doesn't exist!`);
+  }
+
+  // find deployments
+  const appId = checkApp[0].id;
+  const deployments = await findDeployment(appId, deploymentName);
+
+  if (deployments.length === 0) {
+    return responseDto(false, 404, `Deployment ${deploymentName} doesn't exist!`);
+  }
+  return responseDto(true, 200, ``, { table: deployments });
+}
+
 module.exports = {
-  loginUser,
   findUser,
   registerUser,
   getAppListByUser,
   addApp,
+  getDeploymentHistory,
   removeApp,
   renameApp,
 };
