@@ -1,4 +1,4 @@
-const mysql = require("mysql2");
+const mysql = require("mysql2/promise");
 const dotenv = require("dotenv");
 const path = require("path");
 
@@ -15,7 +15,8 @@ const pool = mysql.createPool({
   queueLimit: 0, // No limit on the number of queued connection requests
 });
 
-// Promisify the pool's query method to work with async/await
-const promisePool = pool.promise();
+async function getConnection() {
+  return await pool.getConnection();
+}
 
-module.exports = promisePool;
+module.exports = { db: pool, getConnection };
