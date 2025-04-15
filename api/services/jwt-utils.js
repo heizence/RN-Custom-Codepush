@@ -13,7 +13,7 @@ const generateJWT = accountId => {
       uniqueId,
     },
     process.env.JWT_SECRET, // Secret key stored in .env
-    { expiresIn: "1d" } // Token valid for 7 days
+    { expiresIn: "7d" } // Token valid for 7 days
   );
   return token;
 };
