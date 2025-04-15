@@ -58,6 +58,12 @@ app.use("/app", CheckTokenMiddleware, userAppsRoutes);
 app.use("/deployment", CheckTokenMiddleware, deploymentRoutes);
 app.use("/codepush", CheckTokenMiddleware, codePushRoutes);
 
+// For error handling
+app.use((err, req, res, next) => {
+  console.error("🚨 Error Middleware:", err.stack);
+  res.status(500).json({ message: "Internal Server Error" });
+});
+
 // Start the server
 app.listen(port, () => {
   console.log(`\nCodePush server running on ${url}:${port}\n`);
