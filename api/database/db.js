@@ -13,6 +13,7 @@ const pool = mysql.createPool({
   waitForConnections: true, // Wait for a connection if the pool is busy
   connectionLimit: 10, // Maximum number of connections to create at once
   queueLimit: 0, // No limit on the number of queued connection requests
+  multipleStatements: true,
 });
 
 async function getConnection() {
