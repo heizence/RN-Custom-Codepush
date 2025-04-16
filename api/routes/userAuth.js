@@ -89,7 +89,7 @@ router.get("/logout", (req, res) => {
   // req.logout clears the session data, effectively logging the user out.
   req.logout(err => {
     if (err) {
-      res.status(500).json(responseDto(false, 500, "Logout failed"));
+      res.status(500).json(responseDto(false, "Logout failed"));
     }
     // Need to delete jwt token file stored at local.
     res.redirect("/auth/login"); // Redirect to login after logout
@@ -104,9 +104,9 @@ router.post("/verifyToken", (req, res) => {
   console.log("accessToken : ", accessToken);
   // Check if the token matches the one stored in the session
   if (token === accessToken && verifyToken(token)) {
-    res.status(200).json(responseDto(true, 200, "Token is valid."));
+    res.status(200).json(responseDto(true, "Token is valid."));
   } else {
-    res.status(403).json(responseDto(false, 403, "Invalid token!"));
+    res.status(403).json(responseDto(false, "Invalid token!"));
   }
 });
 

@@ -16,6 +16,23 @@ async function runQuery(query, params = []) {
   }
 }
 
+async function checkAndGetNecessaryData(userId, appName, deploymentName) {
+  if (appName) {
+    const checkApp = await findApp(userId, appName);
+    if (checkApp.length === 0) return null;
+
+    const appId = checkApp[0].id;
+    if (deploymentName) {
+      const deployments = await findDeployment(appId, deploymentName);
+
+      if (deployments.length === 0) return null;
+      return deployments[0].id;
+    }
+    return appId;
+  }
+  return userId;
+}
+
 // Query for finding a specific user by account_id
 async function findUser(accountId) {
   console.log(`\n[query]findUser. accountId : `, accountId);
@@ -35,6 +52,8 @@ async function registerUser(accountId, email = "", userName = "", type) {
   }
 }
 
+/******************* Apps ******************/
+
 async function findApp(userId, appName) {
   console.log(`\n[query]findApp`);
 
@@ -50,44 +69,32 @@ async function findApp(userId, appName) {
 }
 
 // Query for listup all apps by user
-async function getAppListByUser(accountId) {
+async function getAppListByUser(userId) {
   console.log(`\n[query]getAppListByUser`);
-  const checkUser = await findUser(accountId);
-  if (!checkUser) {
-    return null;
-  }
 
-  const userId = checkUser[0].id;
   const res = await findApp(userId);
 
   if (res.length > 0) {
-    return responseDto(true, 200, ``, { table: res });
+    return responseDto(true, ``, { table: res });
   } else if (res.length === 0) {
-    return responseDto(true, 200, `No app added yet!`);
+    return responseDto(true, `No app added yet!`);
   }
   return null;
 }
 
 // Query for add a new app for a specific user
-async function addApp(appName, accountId) {
+async function addApp(userId, appName) {
   console.log(`\n[query]addApp`);
 
   if (!isValidName(appName)) {
-    return responseDto(false, 400, "Invalid name! Name must not contain /, , *, ?, <, >, |, and : ");
+    return responseDto(false, "Invalid name! Name must not contain /, , *, ?, <, >, |, and : ");
   } else if (appName.length > 20) {
-    return responseDto(false, 400, "App name is too long!");
+    return responseDto(false, "App name is too long!");
   }
-
-  const checkUser = await findUser(accountId);
-  if (!checkUser) {
-    return null;
-  }
-
-  const userId = checkUser[0].id;
 
   const checkApp = await findApp(userId, appName);
   if (checkApp && checkApp.length) {
-    return responseDto(false, 400, `An app named "${appName}" already exists.`);
+    return responseDto(false, `An app named "${appName}" already exists.`);
   } else {
     const appId = generateRandomkey(50);
     const connection = await getConnection(); // for transaction
@@ -117,7 +124,7 @@ async function addApp(appName, accountId) {
         { Name: "Staging", "Deployment Key": stagingKey },
       ];
 
-      return responseDto(true, 200, `Successfully added the "${appName}" app, along with the following default deployments:`, { table: apps });
+      return responseDto(true, `Successfully added the "${appName}" app, along with the following default deployments:`, { table: apps });
     } catch (error) {
       await connection.rollback();
       console.error("Transaction failed:", error);
@@ -129,51 +136,39 @@ async function addApp(appName, accountId) {
 }
 
 // Query for remove a specific app owned by a user
-async function removeApp(appName, accountId) {
+async function removeApp(userId, appName) {
   console.log(`\n[query]removeApp`);
-  const checkUser = await findUser(accountId);
-  if (!checkUser) {
-    return null;
-  }
-  const userId = checkUser[0].id;
+
   const query = `DELETE FROM greenlight_codepush_dev_db.apps WHERE app_name = ? AND owner_id = ?`;
 
   const res = await runQuery(query, [appName, userId]);
   if (res.affectedRows > 0) {
-    return responseDto(true, 200, `Successfully removed the "${appName}" app.`);
+    return responseDto(true, `Successfully removed the "${appName}" app.`);
   } else if (res.affectedRows === 0) {
-    return responseDto(false, 400, `App "${appName}" does not exist.`);
+    return responseDto(false, `App "${appName}" does not exist.`);
   }
   return null;
 }
 
 // Query for rename a specific app owned by a user
-async function renameApp(currentAppName, newAppName, accountId) {
+async function renameApp(userId, currentAppName, newAppName) {
   console.log(`\n[query]renameApp`);
-  const checkUser = await findUser(accountId);
-  if (!checkUser) {
-    return null;
-  }
 
-  const userId = checkUser[0].id;
-  const findQuery = `SELECT id, app_name, owner_id, created_at FROM greenlight_codepush_dev_db.apps WHERE app_name = ? AND owner_id = ?`;
-  const result = await runQuery(findQuery, [currentAppName, userId]);
+  const appId = await checkAndGetNecessaryData(userId, currentAppName);
+  if (!appId) return responseDto(false, `App "${currentAppName}" does not exist.`);
 
-  if (result && result.length > 0) {
-    const appId = result[0].id;
-    const query = `UPDATE greenlight_codepush_dev_db.apps SET app_name = ? WHERE id = ?`;
-    const res = await runQuery(query, [newAppName, appId]);
-    //console.log("res : ", res);
-    if (res) {
-      return responseDto(true, 200, `Successfully renamed the "${currentAppName}" app to "${newAppName}".`);
-    }
-    return null;
-  } else {
-    return responseDto(false, 400, `App "${currentAppName}" does not exist.`);
+  const query = `UPDATE greenlight_codepush_dev_db.apps SET app_name = ? WHERE id = ?`;
+  const res = await runQuery(query, [newAppName, appId]);
+
+  if (res) {
+    return responseDto(true, `Successfully renamed the "${currentAppName}" app to "${newAppName}".`);
   }
+  return null;
 }
 
-// Query for get all deployments history for a specific app
+/******************* Deployments ******************/
+
+// Query for get a specific deployment for a specific app
 async function findDeployment(appId, deploymentName) {
   console.log(`\n[query]findDeployment`);
 
@@ -183,34 +178,46 @@ async function findDeployment(appId, deploymentName) {
   return await runQuery(findDeploymentQuery, [appId, deploymentName]);
 }
 
-// Query for add a new app for a specific user
-async function addDeployment(accountId, appName, deploymentName) {
+// Query for get all deployments for a specific app
+async function getDeploymentList(userId, appName) {
+  console.log(`\n[query]getDeploymentList`);
+
+  const appId = await checkAndGetNecessaryData(userId, appName);
+  if (!appId) {
+    return responseDto(false, `App "${appName}" doesn't exist!`);
+  }
+
+  const query = `SELECT deployment_name, deployment_key, created_at FROM greenlight_codepush_dev_db.deployments WHERE app_id = ?;`;
+
+  const res = await runQuery(query, [appId]);
+
+  if (res.length > 0) {
+    return responseDto(true, ``, { table: res });
+  } else if (res.length === 0) {
+    return responseDto(false, `No deployments in app ${appName}.`);
+  }
+  return null;
+}
+
+// Query for add a new app for a specific app
+async function addDeployment(userId, appName, deploymentName) {
   console.log(`\n[query]addDeployment`);
 
   if (!isValidName(appName)) {
-    return responseDto(false, 400, "Invalid name! Name must not contain /, , *, ?, <, >, |, and : ");
+    return responseDto(false, "Invalid name! Name must not contain /, , *, ?, <, >, |, and : ");
   } else if (appName.length > 20) {
-    return responseDto(false, 400, "Deployment name is too long!");
+    return responseDto(false, "Deployment name is too long!");
   }
 
-  const checkUser = await findUser(accountId);
-  if (!checkUser) {
-    return null;
+  const appId = await checkAndGetNecessaryData(userId, appName);
+  if (!appId) {
+    return responseDto(false, `App "${appName}" doesn't exist!`);
   }
 
-  const userId = checkUser[0].id;
-  const checkApp = await findApp(userId, appName);
-
-  if (checkApp.length === 0) {
-    return responseDto(false, 404, `App "${appName}" doesn't exist!`);
-  }
-
-  // find deployments
-  const appId = checkApp[0].id;
   const deployments = await findDeployment(appId, deploymentName);
 
   if (deployments && deployments.length) {
-    return responseDto(false, 400, `A deployment named "${deploymentName}" already exists.`);
+    return responseDto(false, `A deployment named "${deploymentName}" already exists.`);
   } else {
     // add PRODUCTION and STAGING deployments
     const deploymentId = generateRandomkey(50);
@@ -223,32 +230,27 @@ async function addDeployment(accountId, appName, deploymentName) {
     if (res) {
       const deployment = [{ Name: deploymentName, "Deployment Key": deploymentKey }];
 
-      return responseDto(true, 200, `Successfully added the "${deploymentName}" deployment to "${appName}:".`, { table: deployment });
+      return responseDto(true, `Successfully added the "${deploymentName}" deployment to "${appName}:".`, { table: deployment });
     }
     return null;
   }
 }
 
-// 추후 구현
-async function clearDeployment(accountId, appName, deploymentName) {
+// Query for clear all update and rollback history for a specific deployment
+async function clearDeployment(userId, appName, deploymentName) {
   console.log(`\n[query]clearDeployment`);
-  const checkUser = await findUser(accountId);
-  if (!checkUser) {
-    return null;
-  }
 
-  const userId = checkUser[0].id;
   const checkApp = await findApp(userId, appName);
 
   if (checkApp.length === 0) {
-    return responseDto(false, 404, `App "${appName}" doesn't exist!`);
+    return responseDto(false, `App "${appName}" doesn't exist!`);
   }
 
   const appId = checkApp[0].id;
   const deployments = await findDeployment(appId, deploymentName);
 
   if (deployments.length === 0) {
-    return responseDto(false, 404, `Deployment "${deploymentName}" doesn't exist!`);
+    return responseDto(false, `Deployment "${deploymentName}" doesn't exist!`);
   }
 
   const deploymentId = deployments[0].id;
@@ -256,23 +258,18 @@ async function clearDeployment(accountId, appName, deploymentName) {
 
   const res = await runQuery(query, [deploymentId]);
   if (res) {
-    return responseDto(true, 200, `Successfully cleared the "${deploymentName}" deployment.`);
+    return responseDto(true, `Successfully cleared the "${deploymentName}" deployment.`);
   }
   return null;
 }
 
-async function removeDeployment(accountId, appName, deploymentName) {
+async function removeDeployment(userId, appName, deploymentName) {
   console.log(`\n[query]removeDeployment`);
-  const checkUser = await findUser(accountId);
-  if (!checkUser) {
-    return null;
-  }
 
-  const userId = checkUser[0].id;
   const checkApp = await findApp(userId, appName);
 
   if (checkApp.length === 0) {
-    return responseDto(false, 404, `App "${appName}" doesn't exist!`);
+    return responseDto(false, `App "${appName}" doesn't exist!`);
   }
 
   const appId = checkApp[0].id;
@@ -281,25 +278,19 @@ async function removeDeployment(accountId, appName, deploymentName) {
   const res = await runQuery(query, [appId, deploymentName]);
 
   if (res.affectedRows > 0) {
-    return responseDto(true, 200, `Successfully removed the "${deploymentName}" deployment.`);
+    return responseDto(true, `Successfully removed the "${deploymentName}" deployment.`);
   } else if (res.affectedRows === 0) {
-    return responseDto(false, 400, `Deployment "${deploymentName}" doesn't exist.`);
+    return responseDto(false, `Deployment "${deploymentName}" doesn't exist.`);
   }
   return null;
 }
 
-async function renameDeployment(accountId, appName, currentDeploymentName, newDeploymentName) {
+async function renameDeployment(userId, appName, currentDeploymentName, newDeploymentName) {
   console.log(`\n[query]renameDeployment`);
-  const checkUser = await findUser(accountId);
-  if (!checkUser) {
-    return null;
-  }
-
-  const userId = checkUser[0].id;
   const checkApp = await findApp(userId, appName);
 
   if (checkApp.length === 0) {
-    return responseDto(false, 404, `App "${appName}" doesn't exist!`);
+    return responseDto(false, `App "${appName}" doesn't exist!`);
   }
 
   // find deployments
@@ -307,64 +298,27 @@ async function renameDeployment(accountId, appName, currentDeploymentName, newDe
   const deployments = await findDeployment(appId, newDeploymentName);
 
   if (deployments && deployments.length) {
-    return responseDto(false, 400, `A deployment named "${newDeploymentName}" already exists.`);
+    return responseDto(false, `A deployment named "${newDeploymentName}" already exists.`);
   }
 
   const query = `UPDATE greenlight_codepush_dev_db.deployments SET deployment_name = ? WHERE app_id = ? AND deployment_name = ?;`;
 
   const res = await runQuery(query, [newDeploymentName, appId, currentDeploymentName]);
   if (res.affectedRows > 0) {
-    return responseDto(true, 200, `Successfully renamed the "${currentDeploymentName}" deployment to "${newDeploymentName}".`);
+    return responseDto(true, `Successfully renamed the "${currentDeploymentName}" deployment to "${newDeploymentName}".`);
   } else if (res.affectedRows === 0) {
-    return responseDto(false, 404, `Deployment "${currentDeploymentName}" doesn't exist.`);
+    return responseDto(false, `Deployment "${currentDeploymentName}" doesn't exist.`);
   }
   return null;
 }
 
-async function getDeploymentList(accountId, appName) {
-  console.log(`\n[query]getDeploymentList`);
-
-  const checkUser = await findUser(accountId);
-  if (!checkUser) {
-    return null;
-  }
-
-  // find app
-  const userId = checkUser[0].id;
-  const checkApp = await findApp(userId, appName);
-
-  if (checkApp.length === 0) {
-    return responseDto(false, 404, `App "${appName}" doesn't exist!`);
-  }
-
-  // find deployments
-  const appId = checkApp[0].id;
-  const query = `SELECT deployment_name, deployment_key, created_at FROM greenlight_codepush_dev_db.deployments WHERE app_id = ?;`;
-
-  const res = await runQuery(query, [appId]);
-
-  if (res.length > 0) {
-    return responseDto(true, 200, ``, { table: res });
-  } else if (res.length === 0) {
-    return responseDto(false, 404, `No deployments in app ${appName}.`);
-  }
-  return null;
-}
-
-async function getDeploymentHistory(accountId, appName, deploymentName) {
+async function getDeploymentHistory(userId, appName, deploymentName) {
   console.log(`\n[query]getDeploymentHistory`);
 
-  const checkUser = await findUser(accountId);
-  if (!checkUser) {
-    return null;
-  }
-
-  // find app
-  const userId = checkUser[0].id;
   const checkApp = await findApp(userId, appName);
 
   if (checkApp.length === 0) {
-    return responseDto(false, 404, `App "${appName}" doesn't exist!`);
+    return responseDto(false, `App "${appName}" doesn't exist!`);
   }
 
   // find deployments
@@ -372,11 +326,10 @@ async function getDeploymentHistory(accountId, appName, deploymentName) {
   const deployments = await findDeployment(appId, deploymentName);
 
   if (deployments.length === 0) {
-    return responseDto(false, 404, `Deployment "${deploymentName}" doesn't exist!`);
+    return responseDto(false, `Deployment "${deploymentName}" doesn't exist!`);
   }
 
   const deploymentId = deployments[0].id;
-  // const query = `DELETE FROM greenlight_codepush_dev_db.updates WHERE deployment_id = ?;`;
 
   const query = `
     SELECT version, label, release_notes, is_mandatory, is_active, created_at FROM greenlight_codepush_dev_db.updates WHERE deployment_id = ?;
@@ -388,15 +341,14 @@ async function getDeploymentHistory(accountId, appName, deploymentName) {
   const [updates, rollbacks] = res;
 
   if (updates.length > 0 || rollbacks.length > 0) {
-    // return responseDto(true, 200, `Successfully cleared the "${deploymentName}" deployment.`);
-    return responseDto(true, 200, ``, {
+    return responseDto(true, ``, {
       multipleTable: [
         { title: "Updates", table: updates },
         { title: "Rollbacks", table: rollbacks },
       ],
     });
   } else if (res.length === 0) {
-    return responseDto(false, 404, `No history in deployment "${deploymentName}".`);
+    return responseDto(false, `No history in deployment "${deploymentName}".`);
   }
 }
 
