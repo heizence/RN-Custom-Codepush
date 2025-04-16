@@ -3,9 +3,8 @@ const router = express.Router();
 const { addApp, renameApp, removeApp, getAppListByUser } = require("../database/query");
 const { responseDto } = require("../DTO/response");
 
-router.get("/list", async (req, res) => {
+router.get("/list", async (req, res, next) => {
   console.log(`\n[router]/app/list`);
-
   try {
     const userId = req.userId;
     const queryRes = await getAppListByUser(userId);
@@ -16,18 +15,17 @@ router.get("/list", async (req, res) => {
       res.status(200).json(queryRes);
     }
   } catch (err) {
-    res.status(501).json(responseDto(false, "Get list failed. Internal error!", err));
+    next(err);
   }
 });
 
-router.get("/find", async (req, res) => {
+router.get("/find", async (req, res, next) => {
   console.log(`\n[router]/app/find`);
 
   try {
     const userId = req.userId;
     const appName = req.query.appName;
     const checkApp = await findApp(userId, appName);
-    console.log("queryRes : ", queryRes);
 
     if (checkApp.length === 0) {
       res.status(404).json(responseDto(false, `App "${appName}" doesn't exist!`));
@@ -36,11 +34,11 @@ router.get("/find", async (req, res) => {
       res.status(200).json(queryRes);
     }
   } catch (err) {
-    res.status(501).json(responseDto(false, "Get list failed. Internal error!", err));
+    next(err);
   }
 });
 
-router.post("/add", async (req, res) => {
+router.post("/add", async (req, res, next) => {
   console.log(`\n[router]/app/add`);
   try {
     const userId = req.userId;
@@ -53,11 +51,11 @@ router.post("/add", async (req, res) => {
       res.status(200).json(queryRes);
     }
   } catch (err) {
-    res.status(501).json(responseDto(false, "Add app failed. Internal error!", err));
+    next(err);
   }
 });
 
-router.post("/remove", async (req, res) => {
+router.post("/remove", async (req, res, next) => {
   console.log(`\n[router]/app/remove`);
   try {
     const userId = req.userId;
@@ -70,11 +68,11 @@ router.post("/remove", async (req, res) => {
       res.status(200).json(queryRes);
     }
   } catch (err) {
-    res.status(501).json(responseDto(false, "Remove app failed. Internal error!", err));
+    next(err);
   }
 });
 
-router.post("/rename", async (req, res) => {
+router.post("/rename", async (req, res, next) => {
   console.log(`\n[router]/app/remove`);
   try {
     const userId = req.userId;
@@ -87,7 +85,7 @@ router.post("/rename", async (req, res) => {
       res.status(200).json(queryRes);
     }
   } catch (err) {
-    res.status(501).json(responseDto(false, "Rename app failed. Internal error!", err));
+    next(err);
   }
 });
 

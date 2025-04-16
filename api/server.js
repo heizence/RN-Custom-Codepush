@@ -12,6 +12,7 @@ const deploymentRoutes = require("./routes/deployments");
 const codePushRoutes = require("./routes/codePushRequest");
 const dashBoardRoutes = require("./routes/dashBoard");
 const CheckTokenMiddleware = require("./middlewares/checkToken");
+const { responseDto } = require("./DTO/response");
 
 // Load environment variables
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
@@ -60,8 +61,9 @@ app.use("/codepush", CheckTokenMiddleware, codePushRoutes);
 
 // For error handling
 app.use((err, req, res, next) => {
-  console.error("🚨 Error Middleware:", err.stack);
-  res.status(500).json({ message: "Internal Server Error" });
+  //console.error("🚨 Error Middleware:", err.stack);
+  console.log("error middleware");
+  res.status(501).json(responseDto(false, "Internal Server Error", err));
 });
 
 // Start the server
