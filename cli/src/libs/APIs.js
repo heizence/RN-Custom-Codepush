@@ -80,14 +80,14 @@ const commonMultipartAPI = async (reqPath, formData, needAuth = true) => {
   const baseUrl = process.env.SERVER_URL || "http://localhost";
   const port = process.env.PORT || 3000;
 
-  //console.log("baseURL : ", `${baseUrl}:${port}/`);
   return axios({
     baseURL: `${baseUrl}:${port}/`,
     url: reqPath,
     method: "post",
     headers: {
+      ...formData.getHeaders(),
       Authorization: accessToken, // Send token in the request
-      "Content-Type": "multipart/form-data",
+      maxBodyLength: Infinity,
       Accept: "application/json",
     },
     data: formData,
@@ -110,6 +110,7 @@ const commonMultipartAPI = async (reqPath, formData, needAuth = true) => {
       return response.data;
     })
     .catch(error => {
+      //console.log("error : ", error);
       //console.log(`[commonMultipartAPI] [${path}]error : `, error.response?.data);
       console.log(chalk.red("[Error] " + error.response?.data.message));
       return error.response?.data;
@@ -127,8 +128,8 @@ const getDeploymentList = params => commonAPI("get", "deployment/list", params);
 const getDeploymentHistory = params => commonAPI("get", "deployment/history", params);
 const removeApp = body => commonAPI("post", "app/remove", body);
 const renameApp = body => commonAPI("post", "app/rename", body);
-
-const uploadBundleFile = body => commonMultipartAPI("post", "codepush/upload", body);
+const checkBundleOptions = body => commonAPI("post", "codepush/check", body);
+const uploadBundle = body => commonMultipartAPI("codepush/upload", body);
 
 module.exports = {
   verifyToken,
@@ -142,4 +143,6 @@ module.exports = {
   getDeploymentHistory,
   removeApp,
   renameApp,
+  checkBundleOptions,
+  uploadBundle,
 };
