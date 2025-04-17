@@ -1,15 +1,8 @@
 #!/usr/bin/env node
 const { Command } = require("commander");
 const program = new Command();
-const chalk = require("chalk");
 const dotenv = require("dotenv");
 const path = require("path");
-const fs = require("fs");
-const os = require("os");
-const { execSync } = require("child_process");
-const FormData = require("form-data");
-const { uuidv4 } = require("uuid");
-const archiver = require("archiver");
 
 const commandHandlers = require("./src/commands/command.index");
 
@@ -62,86 +55,13 @@ program
 
 program
   .command("release")
+  .arguments("[appName] [platform]")
   .description("Release a new update to CodePush server")
+  .option("-d, --deployment <deploymentName>", "Deployment name")
   .option("-m, --isMandatory", "isMandatory")
-  .option("-a, --app <appName>", "App name")
-  .option("-p, --platform <platform>", "Platform: android | ios")
-  .option("-d, --deployment <deploymentName>", "Deployment name") // Production || Staging
-  .action(async options => {
-    try {
-      console.log("options: ", options);
-      const { isMandatory, app, platform, deployment } = options;
-      if (!app || !platform || !deployment) {
-        console.log(`Usage: greenlight-codepush release -m <isMandatory> -a <appName> -p <platform> -d <deploymentName> \n`);
-        return;
-      }
-
-      const bundleOutputDir = path.resolve(os.tmpdir(), `codepush_bundle_${platform}`);
-      const bundleOutput = path.join(bundleOutputDir, "index.bundle");
-      const assetsDest = path.join(bundleOutputDir, "assets");
-      const zipFilePath = path.resolve(os.tmpdir(), `codepush_bundle_${platform}.zip`);
-
-      console.log(chalk.blue("📦 1. Bundling the React Native app..."));
-
-      // 번들 디렉토리 정리
-      fs.rmSync(bundleOutputDir, { recursive: true, force: true });
-      fs.mkdirSync(bundleOutputDir, { recursive: true });
-
-      // 1. React Native 번들 생성
-      execSync(`npx react-native bundle --platform ${platform} --dev false --entry-file index.js --bundle-output ${bundleOutput} --assets-dest ${assetsDest}`, {
-        stdio: "inherit",
-      });
-
-      console.log(chalk.green("✅ Bundle created successfully"));
-
-      // 2. .zip 파일로 압축
-      console.log(chalk.blue("📦 2. Zipping the bundle..."));
-
-      await new Promise((resolve, reject) => {
-        const output = fs.createWriteStream(zipFilePath);
-        const archive = archiver("zip", { zlib: { level: 9 } });
-
-        output.on("close", () => {
-          console.log(chalk.green(`✅ Zip created: ${zipFilePath}`));
-          resolve();
-        });
-
-        archive.on("error", err => reject(err));
-
-        archive.pipe(output);
-        archive.file(bundleOutput, { name: "index.bundle" });
-        archive.directory(assetsDest, "assets");
-        archive.finalize();
-      });
-
-      // 3. 서버로 업로드
-      console.log(chalk.blue("⬆️  3. Uploading to CodePush server..."));
-
-      const form = new FormData();
-      form.append("app", app);
-      form.append("deployment", deployment);
-      form.append("targetBinaryVersion", targetBinaryVersion);
-      form.append("releaseId", uuidv4());
-      form.append("bundle", fs.createReadStream(zipFilePath));
-
-      // 3. 서버 요청
-      const res = await axios.post(`${process.env.SERVER_URL}/release`, form, {
-        headers: {
-          ...form.getHeaders(),
-          Authorization: `Bearer ${process.env.ACCESS_TOKEN}`,
-        },
-      });
-
-      console.log(chalk.green(`✅ Release successful: ${res.data.message}`));
-    } catch (err) {
-      console.log(chalk.red(`❌ Error during release: ${err.message}`));
-    } finally {
-      // 4. 생성된 임시 파일 삭제
-      // console.log(chalk.yellow("🧹 Cleaning up temporary files..."));
-      // fs.rmSync(bundleOutputDir, { recursive: true, force: true });
-      // if (fs.existsSync(zipFilePath)) fs.rmSync(zipFilePath);
-      // console.log(chalk.green("✅ Cleaned up."));
-    }
+  .option("-t, --targetBinaryVersion <targetBinaryVersion>", "Version: x.x.x")
+  .action(async (appName, platform, options) => {
+    commandHandlers.release(appName, platform, options);
   });
 
 program
