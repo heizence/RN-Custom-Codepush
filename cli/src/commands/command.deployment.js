@@ -53,6 +53,17 @@ const renameDeployment = async (appName, currentDeploymentName, newDeploymentNam
   return await API.renameDeployment({ appName, currentDeploymentName, newDeploymentName });
 };
 
+const printCommandGuide = () => {
+  console.log(`Usage: greenlight-codepush deployment <command>\n`);
+  console.log("commands : ");
+  console.log(`  greenlight-codepush deployment add       Add a new deployment to an app`);
+  console.log(`  greenlight-codepush deployment clear    Clear the release history associated with a deployment`);
+  console.log(`  greenlight-codepush deployment remove    Remove a deployment from an app`);
+  console.log(`  greenlight-codepush deployment rename    Rename an existing deployment`);
+  console.log(`  greenlight-codepush deployment list      Lists the deployments associated with an app`);
+  console.log(`  greenlight-codepush deployment history      Display the release history for a deployment`);
+};
+
 const handleDeploymentCommand = async (arg1, arg2, arg3, arg4) => {
   switch (arg1) {
     case "list":
@@ -74,14 +85,7 @@ const handleDeploymentCommand = async (arg1, arg2, arg3, arg4) => {
       renameDeployment(arg2, arg3, arg4);
       break;
     default:
-      console.log(`Usage: greenlight-codepush deployment <command>\n`);
-      console.log("commands : ");
-      console.log(`  greenlight-codepush deployment add       Add a new deployment to an app`);
-      console.log(`  greenlight-codepush deployment clear    Clear the release history associated with a deployment`);
-      console.log(`  greenlight-codepush deployment remove    Remove a deployment from an app`);
-      console.log(`  greenlight-codepush deployment rename    Rename an existing deployment`);
-      console.log(`  greenlight-codepush deployment list      Lists the deployments associated with an app`);
-      console.log(`  greenlight-codepush deployment history      Display the release history for a deployment`);
+      printCommandGuide();
       break;
   }
 };

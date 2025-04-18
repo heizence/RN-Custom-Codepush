@@ -35,6 +35,15 @@ const renameApp = async (currentAppName, newAppName) => {
   return await API.renameApp({ currentAppName, newAppName });
 };
 
+const printCommandGuide = () => {
+  console.log(`Usage: greenlight-codepush app <command>\n`);
+  console.log("commands : ");
+  console.log(`  greenlight-codepush app add       Add a new app to your account`);
+  console.log(`  greenlight-codepush app remove    Remove an app from your account`);
+  console.log(`  greenlight-codepush app rename    Rename an existing app`);
+  console.log(`  greenlight-codepush app list      Lists the apps associated with your account`);
+};
+
 const handleAppCommand = async (arg1, arg2, arg3) => {
   switch (arg1) {
     case "add":
@@ -50,12 +59,7 @@ const handleAppCommand = async (arg1, arg2, arg3) => {
       renameApp(arg2, arg3);
       break;
     default:
-      console.log(`Usage: greenlight-codepush app <command>\n`);
-      console.log("commands : ");
-      console.log(`  greenlight-codepush app add       Add a new app to your account`);
-      console.log(`  greenlight-codepush app remove    Remove an app from your account`);
-      console.log(`  greenlight-codepush app rename    Rename an existing app`);
-      console.log(`  greenlight-codepush app list      Lists the apps associated with your account`);
+      printCommandGuide();
       break;
   }
 };
