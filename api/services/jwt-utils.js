@@ -19,11 +19,10 @@ const generateJWT = accountId => {
 };
 
 const verifyToken = token => {
-  if (!token) {
-    return false;
-  }
-
   try {
+    if (!token) {
+      return false;
+    }
     const verified = jwt.verify(token, process.env.JWT_SECRET);
     //console.log("verified : ", verified);
     return verified;
