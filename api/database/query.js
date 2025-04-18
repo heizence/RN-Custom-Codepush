@@ -11,7 +11,6 @@ async function runQuery(query, params = []) {
     }
     return null;
   } catch (error) {
-    console.error("Database Error:", error);
     throw error;
   }
 }
@@ -352,6 +351,36 @@ async function getDeploymentHistory(userId, appName, deploymentName) {
   }
 }
 
+/******************* Codepush ******************/
+async function checkArgsAndOptions(userId, appName, platform, deploymentName, targetBinaryVersion) {
+  console.log(`\n[query]checkArgsAndOptions`);
+  const checkApp = await findApp(userId, appName);
+
+  if (checkApp.length === 0) {
+    return responseDto(false, `App "${appName}" doesn't exist!`);
+  }
+
+  if (!Boolean(platform === "android" || platform === "ios")) {
+    return responseDto(false, `Platform must be either "android" or "ios".`);
+  }
+
+  const appId = checkApp[0].id;
+  const deployments = await findDeployment(appId, deploymentName);
+
+  if (deployments.length === 0) {
+    return responseDto(false, `Deployment "${deploymentName}" doesn't exist.`);
+  }
+
+  if (targetBinaryVersion) {
+    const semverRegex = /^\d+\.\d+\.\d+$/;
+    if (!semverRegex.test(targetBinaryVersion)) {
+      return responseDto(false, `Please use a semver-compliant target binary version range, for example "1.0.0".`);
+    }
+  }
+
+  return responseDto(true, ``);
+}
+
 module.exports = {
   findUser,
   registerUser,
@@ -365,4 +394,5 @@ module.exports = {
   renameDeployment,
   getDeploymentList,
   getDeploymentHistory,
+  checkArgsAndOptions,
 };
